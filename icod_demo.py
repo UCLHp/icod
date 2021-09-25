@@ -31,6 +31,8 @@ def main():
     fileCollimator = os.path.join(machine_dir,"Collimator.stl")
     fileCouch = os.path.join(machine_dir,"TableTop.stl")
     fileTable = os.path.join(machine_dir,"PatientSupport.stl")
+    # specify patient stl file
+    filePatient = os.path.join(patient_dir,"BODY.stl")
     
     # specify model colours
     gantry_colour = (0.678431, 0.847059, 0.901961)
@@ -44,9 +46,8 @@ def main():
     collimator = Mesh(fileCollimator).c('dark blue')
     couchtop = Mesh(fileCouch).c('lb')
     couch = Mesh(fileTable).c('dark blue')
-
     # load patient stl
-    body = Mesh(patient_dir).c('light green')
+    body = Mesh(filePatient).c('light green')
 
     # adjust geometries to realistic relative positions
     initial_machine_rot = 90
@@ -62,6 +63,7 @@ def main():
 
     # model colour selection functions
     def set_colours(model_list, colour_list):
+        """ Change mesh colours """
         for model, colour in zip(model_list, colour_list):
             model_properties = model.GetProperty()
             model_properties.SetColor(colour)
@@ -77,12 +79,13 @@ def main():
     def collivision(a,b, a_name, b_name):
         """ Collision detection between two objects (a and b).
         
-        Parameters:
+        Args:
         a (vedo mesh object)
         b (vedo mesh object)
         
         Returns:
-        Running total of collisions printed to terminal
+        Collision geometry printed to terminal
+        Mesh collisions visualised in red
         """
         ap = a.clean().polydata()
         bp = b.clean().polydata()
@@ -102,25 +105,17 @@ def main():
         if collide.GetNumberOfContacts() > 0:
             global geometry
             print("Collision between "+a_name+" and "+b_name+"! "+str(geometry))
-            a_properties = a.GetProperty()
-            a_properties.SetColor((1,0,0))
-            b_properties = b.GetProperty()
-            b_properties.SetColor((1,0,0))
+            set_colours([a,b],[(1,0,0),(1,0,0)])
 
-    
     # slider callback functions
-    global gantry_angle
-    gantry_angle = 0
-
-    global snout_extension
-    snout_extension = 0
-
     def slider_y(widget, event):
         """ Moves patient ANT-POST """
         # reset mesh colours
         set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        # move patient
         value = widget.GetRepresentation().GetValue()
         body.y(value)  # set patient y position
+        # record new geometry
         global geometry
         geometry["BodyY"]=round(value,1)
         # detect collisions
@@ -133,6 +128,7 @@ def main():
         set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
         value = widget.GetRepresentation().GetValue()
         body.z(value)  # set patient z position
+        # record new geometry
         global geometry
         geometry["BodyZ"]=round(value,1)
         # detect collisions
@@ -149,6 +145,7 @@ def main():
         T.RotateZ(value)
         gantry.SetUserTransform(T)
         collimator.SetUserTransform(T)  # set gantry angle
+        # record new geometry
         global geometry
         geometry["GantryAngle"]=round(value,1)
         # detect collisions
@@ -162,6 +159,7 @@ def main():
         # extend snout
         value = widget.GetRepresentation().GetValue()
         collimator.SetPosition(0,value,0)
+        # record new geometry
         global geometry
         geometry["SnoutExt"]=round(value,1)
         # detect collisions
