@@ -69,9 +69,6 @@ def main():
             model_properties.SetColor(colour)
     
     # collision detection functions
-    global collision_count
-    collision_count = 0 # collision counter
-    
     keys = ["GantryAngle", "SnoutExt", "BodyY", "BodyZ"]
     global geometry
     geometry = {key: 0 for key in keys}
