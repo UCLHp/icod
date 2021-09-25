@@ -31,7 +31,14 @@ def main():
     fileCollimator = os.path.join(machine_dir,"Collimator.stl")
     fileCouch = os.path.join(machine_dir,"TableTop.stl")
     fileTable = os.path.join(machine_dir,"PatientSupport.stl")
-
+    
+    # specify model colours
+    gantry_colour = (0.678431, 0.847059, 0.901961)
+    collimator_colour = (0, 0, 0.545098)
+    couchtop_colour = (0.678431, 0.847059, 0.901961)
+    couch_colour = (0, 0, 0.545098)
+    body_colour = (0.564706, 0.933333, 0.564706)
+    
     # load machine stl
     gantry = Mesh(fileGantry).c('lb')
     collimator = Mesh(fileCollimator).c('dark blue')
@@ -53,11 +60,21 @@ def main():
     couchtop.z(initial_couch_offset)
     couch.z(initial_couch_offset)   
 
+    # model colour selection functions
+    def set_colours(model_list, colour_list):
+        for model, colour in zip(model_list, colour_list):
+            model_properties = model.GetProperty()
+            model_properties.SetColor(colour)
+    
     # collision detection functions
     global collision_count
     collision_count = 0 # collision counter
+    
+    keys = ["GantryAngle", "SnoutExt", "BodyY", "BodyZ"]
+    global geometry
+    geometry = {key: 0 for key in keys}
 
-    def collivision(a,b):
+    def collivision(a,b, a_name, b_name):
         """ Collision detection between two objects (a and b).
         
         Parameters:
@@ -67,15 +84,14 @@ def main():
         Returns:
         Running total of collisions printed to terminal
         """
-        global collision_count
-        a = a.clean().polydata()
-        b = b.clean().polydata()
+        ap = a.clean().polydata()
+        bp = b.clean().polydata()
         transform0 = vtk.vtkTransform()
         transform1 = vtk.vtkTransform()
         collide = vtk.vtkCollisionDetectionFilter()
-        collide.SetInputData(0, a)
+        collide.SetInputData(0, ap)
         collide.SetTransform(0, transform0)
-        collide.SetInputData(1, b)
+        collide.SetInputData(1, bp)
         collide.SetTransform(1, transform1)
         collide.SetBoxTolerance(0.0)
         collide.SetCellTolerance(0.0)
@@ -84,9 +100,14 @@ def main():
         collide.GenerateScalarsOn()
         collide.Update()
         if collide.GetNumberOfContacts() > 0:
-            collision_count +=1
-            print("Collision!"+str(collision_count))
+            global geometry
+            print("Collision between "+a_name+" and "+b_name+"! "+str(geometry))
+            a_properties = a.GetProperty()
+            a_properties.SetColor((1,0,0))
+            b_properties = b.GetProperty()
+            b_properties.SetColor((1,0,0))
 
+    
     # slider callback functions
     global gantry_angle
     gantry_angle = 0
@@ -96,28 +117,56 @@ def main():
 
     def slider_y(widget, event):
         """ Moves patient ANT-POST """
+        # reset mesh colours
+        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
         value = widget.GetRepresentation().GetValue()
         body.y(value)  # set patient y position
+        global geometry
+        geometry["BodyY"]=round(value,1)
+        # detect collisions
+        collivision(collimator,couchtop, "collimator", "couchtop")
+        collivision(collimator,body, "collimator", "body")
 
     def slider_z(widget, event):
         """ Moves patient SUP-INF """
+        # reset mesh colours
+        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
         value = widget.GetRepresentation().GetValue()
         body.z(value)  # set patient z position
+        global geometry
+        geometry["BodyZ"]=round(value,1)
+        # detect collisions
+        collivision(collimator,couchtop, "collimator", "couchtop")
+        collivision(collimator,body, "collimator", "body")
 
     def slider_g(widget, event):
-        """ Rotates gantry and collimator """
+        """ Rotates gantry and collimator  """
+        # reset mesh colours
+        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        # rotate gantry
         value = widget.GetRepresentation().GetValue()
         T = vtk.vtkTransform()
         T.RotateZ(value)
         gantry.SetUserTransform(T)
         collimator.SetUserTransform(T)  # set gantry angle
-        collivision(collimator,couchtop)
+        global geometry
+        geometry["GantryAngle"]=round(value,1)
+        # detect collisions
+        collivision(collimator,couchtop, "collimator", "couchtop")
+        collivision(collimator,body, "collimator", "body")
 
     def slider_s(widget, event):
         """ Extends collimator """
+        # reset mesh colours
+        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        # extend snout
         value = widget.GetRepresentation().GetValue()
         collimator.SetPosition(0,value,0)
-        collivision(collimator,couchtop)
+        global geometry
+        geometry["SnoutExt"]=round(value,1)
+        # detect collisions
+        collivision(collimator,couchtop, "collimator", "couchtop")
+        collivision(collimator,body, "collimator", "body")
 
     # create sliders
     plt.addSlider3D(
