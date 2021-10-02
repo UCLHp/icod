@@ -1,4 +1,17 @@
-from numpy.matrixlib import defmatrix
+"""Created on 2 Oct 2021
+
+Interactive Collision Detection (ICoD) Demo.
+@author: Alex Grimwood
+
+run from the command line:
+python icod_demo.py
+
+See requirements.txt for dependencies
+
+Ask the author for the necessary .stl files
+
+Based upon previous work by kpiqu
+"""
 import vtkmodules.all as vtk
 from vedo import *
 import argparse
@@ -67,7 +80,7 @@ def main():
     # Load CLI args
     args = get_program_parameters()
 
-    # Initialise display
+    # Initialise display window
     plt = Plotter(title="Collision Demo")
         
     # Define colors
@@ -78,12 +91,12 @@ def main():
     patient_dir = os.path.normpath(args.patient_dir)
 
     # Specify machine stl files
-    fileGantry = os.path.join(machine_dir,"Gantry.stl")
-    fileCollimator = os.path.join(machine_dir,"Collimator.stl")
-    fileCouch = os.path.join(machine_dir,"TableTop.stl")
+    fileGantry = os.path.join(machine_dir,args.gantry)
+    fileCollimator = os.path.join(machine_dir,args.collimator)
+    fileCouch = os.path.join(machine_dir,args.couch)
     
     # Specify patient stl file
-    filePatient = os.path.join(patient_dir,"BODY.stl")
+    filePatient = os.path.join(patient_dir,args.body)
     
     # Specify model colours
     gantry_colour = (0.678431, 0.847059, 0.901961)
