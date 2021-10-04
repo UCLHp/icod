@@ -33,8 +33,7 @@ def get_program_parameters():
     return args
 
 
-def collisionfilter(mesh1, mesh2, clean1=True, clean2=True,
-    mesh1_color=None, mesh2_color=None, mesh1_opacity=None, mesh2_opacity=None):
+def collisionfilter(mesh1, mesh2, clean1=True, clean2=True):
     ''' Create a vtk collision detection filter between two mesh objects '''
     # extract polydata from mesh objects
     if clean1 is True:
@@ -71,8 +70,8 @@ def collisionfilter(mesh1, mesh2, clean1=True, clean2=True,
     actor = vtk.vtkActor()
     actor.SetMapper(mapper)
     actor.GetProperty().SetColor((1,0,0))
-    actor.GetProperty().SetOpacity(1)
-    actor.GetProperty().SetLineWidth(150.0)
+    actor.GetProperty().SetOpacity(0.85)
+    actor.GetProperty().SetLineWidth(20.0)
 
     # poly1 mapper
     mapper1 = vtk.vtkPolyDataMapper()
@@ -84,8 +83,7 @@ def collisionfilter(mesh1, mesh2, clean1=True, clean2=True,
     actor1.GetProperty().BackfaceCullingOn()
     actor1.SetUserTransform(tform1)
     actor1.GetProperty().SetColor(mesh1.GetProperty().GetDiffuseColor())
-    if mesh1_opacity:
-        actor1.GetProperty().SetOpacity(mesh1_opacity)
+    actor1.GetProperty().SetOpacity(0.85)
 
     # poly2 mapper
     mapper2 = vtk.vtkPolyDataMapper()
@@ -97,8 +95,7 @@ def collisionfilter(mesh1, mesh2, clean1=True, clean2=True,
     actor2.GetProperty().BackfaceCullingOn()
     actor2.SetUserTransform(tform2)
     actor2.GetProperty().SetColor(mesh2.GetProperty().GetDiffuseColor())
-    if mesh2_opacity:
-        actor2.GetProperty().SetOpacity(mesh2_opacity)
+    actor2.GetProperty().SetOpacity(0.85)
     
     return collide, actor, actor1, actor2, tform1, tform2
 
@@ -156,28 +153,29 @@ def main():
 
     # Create collision filters
     collide0, actor0, actor0_snout, actor0_body, tform0_snout, tform0_body = collisionfilter(
-        mesh1=collimator, mesh2=body, mesh1_opacity=0.75, mesh2_opacity=0.75)
+        mesh1=collimator, mesh2=body)
     
     collide1, actor1, actor1_snout, actor1_couch, tform1_2, tform1_1 = collisionfilter(
-        mesh1=collimator, mesh2=couchtop, mesh1_opacity=0.75, mesh2_opacity=0.75)
+        mesh1=collimator, mesh2=couchtop)
 
     # Model colour selection function
-    def set_colours(model_list, colour_list):
-        """ Change mesh colours """
-        for model, colour in zip(model_list, colour_list):
-            model_properties = model.GetProperty()
-            #model_properties.SetColor(colour)
+    def reset_colours(actors, colours):
+        """ Change actor colours """
+        for actor, colour in zip(actors, colours):
+            actor.GetProperty().SetColor(colour)
+            actor.GetProperty().SetOpacity(0.85)
 
     # Collision details reporting function
     keys = ["Gantry", "Snout", "BodyX", "BodyY", "BodyZ", "CouchY"]
     global geometry
     geometry = {key: 0 for key in keys}
 
-    def collision_vis(collisionfilter, meshes):
+    def collision_vis(collisionfilter, actors):
         ''' Identify collision objects and their geometries '''
         if collisionfilter.GetNumberOfContacts() > 0:
-            print("Collision between "+meshes[0].name+" and "+meshes[1].name+": "+str(geometry))
-            #set_colours(meshes,[(1,0,0),(1,0,0)])
+            print("Collision: "+str(geometry))
+            for actor in actors:
+                actor.GetProperty().SetOpacity(0.5)
 
     # Initialise gantry and snout values
     global g_theta, s_ext
@@ -189,7 +187,8 @@ def main():
         """ Moves patient LEFT-RIGHT """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
         # move patient
         body.x(value)  # set patient x position
         tform0_body.SetMatrix(body.GetMatrix())
@@ -197,13 +196,14 @@ def main():
         global geometry
         geometry["BodyX"]=round(value,1)
         # detect collisions
-        collision_vis(collide0,[body,collimator])
+        collision_vis(collide0,[actor0_body,actor0_snout,actor1_snout])
 
     def slider_y(widget, event):
         """ Moves patient ANT-POST """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
         # move patient
         body.y(value)  # set patient y position
         tform0_body.SetMatrix(body.GetMatrix())
@@ -211,13 +211,14 @@ def main():
         global geometry
         geometry["BodyY"]=round(value,1)
         # detect collisions
-        collision_vis(collide0,[body,collimator])
+        collision_vis(collide0,[actor0_body,actor0_snout,actor1_snout])
 
     def slider_z(widget, event):
         """ Moves patient SUP-INF """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
         # move patient
         body.z(value)  # set patient z position
         tform0_body.SetMatrix(body.GetMatrix())
@@ -225,14 +226,15 @@ def main():
         global geometry
         geometry["BodyZ"]=round(value,1)
         # detect collisions
-        collision_vis(collide0,[body,collimator])
+        collision_vis(collide0,[actor0_body,actor0_snout,actor1_snout])
 
     def slider_c(widget, event):
         """ Moves couch ANT-POST """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
-        # move patient
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
+        # move couch
         T = vtk.vtkTransform()
         T.Translate(0., value, 0.)
         couchtop.SetUserMatrix(T.GetMatrix())
@@ -241,13 +243,14 @@ def main():
         global geometry
         geometry["CouchY"]=round(value,1)
         # detect collisions
-        collision_vis(collide1,[couchtop,collimator])
+        collision_vis(collide1,[actor1_couch,actor0_snout,actor1_snout])
 
     def slider_g(widget, event):
         """ Rotates gantry and collimator  """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
         # rotate gantry
         global g_theta
         g_theta = value
@@ -266,14 +269,15 @@ def main():
         global geometry
         geometry["Gantry"]=round(value,1)
         # detect collisions
-        collision_vis(collide0,[body,collimator])
-        collision_vis(collide1,[couchtop,collimator])
+        collision_vis(collide0,[actor0_body,actor0_snout, actor1_snout])
+        collision_vis(collide1,[actor1_couch,actor0_snout, actor1_snout])
 
     def slider_s(widget, event):
         """ Extends collimator """
         value = widget.GetRepresentation().GetValue()
         # reset mesh colours
-        set_colours([collimator, couchtop, body], [collimator_colour, couchtop_colour, body_colour])
+        reset_colours([actor0_snout, actor1_snout, actor0_body, actor1_couch],
+            [collimator_colour, collimator_colour, body_colour, couchtop_colour])
         # transform colimator
         global g_theta, s_ext
         s_ext = value
@@ -287,8 +291,8 @@ def main():
         global geometry
         geometry["Snout"]=round(value,1)
         # detect collisions
-        collision_vis(collide0,[body,collimator])
-        collision_vis(collide1,[couchtop,collimator])
+        collision_vis(collide0,[actor0_body,actor0_snout, actor1_snout])
+        collision_vis(collide1,[actor1_couch,actor0_snout, actor1_snout])
                 
     plt.addSlider3D(
         slider_x,
