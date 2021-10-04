@@ -116,6 +116,9 @@ def main():
     body = Mesh(filePatient).c(body_colour)
     body.name = "body"
 
+    # gantry opacity
+    gantry.GetProperty().SetOpacity(0.2)
+
     # Adjust machine to realistic orientation
     initial_machine_rot = 90
     initial_couch_offset = 0
@@ -136,7 +139,7 @@ def main():
             model_properties.SetColor(colour)
 
     # Collision details reporting function
-    keys = ["Gantry", "Snout", "BodyX", "BodyY", "BodyZ"]
+    keys = ["Gantry", "Snout", "BodyX", "BodyY", "BodyZ", "CouchY"]
     global geometry
     geometry = {key: 0 for key in keys}
 
@@ -165,7 +168,6 @@ def main():
         geometry["BodyX"]=round(value,1)
         # detect collisions
         collision_vis(collide0,[body,collimator])
-        collision_vis(collide1,[couchtop,collimator])
 
     def slider_y(widget, event):
         """ Moves patient ANT-POST """
@@ -180,7 +182,6 @@ def main():
         geometry["BodyY"]=round(value,1)
         # detect collisions
         collision_vis(collide0,[body,collimator])
-        collision_vis(collide1,[couchtop,collimator])
 
     def slider_z(widget, event):
         """ Moves patient SUP-INF """
@@ -195,7 +196,6 @@ def main():
         geometry["BodyZ"]=round(value,1)
         # detect collisions
         collision_vis(collide0,[body,collimator])
-        collision_vis(collide1,[couchtop,collimator])
 
     def slider_g(widget, event):
         """ Rotates gantry and collimator  """
@@ -298,7 +298,7 @@ def main():
     plt.addSlider2D(
         slider_s,
         xmin=0,
-        xmax=250,
+        xmax=450,
         value=0,
         pos=3,
         title='snout extension (mm)',
